@@ -10,7 +10,6 @@
   (dune (>= 2.8))
   menhir
   pprint
-  nice_parser
   ppx_sexp_conv
   ppx_expect
   base))

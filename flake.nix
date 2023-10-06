@@ -85,7 +85,6 @@
               ocamlPackages.alcotest
               ocamlPackages.base
               ocamlPackages.pprint
-              # ocamlPackages.nice_parser
             ];
 
             checkInputs = [ ocamlPackages.alcotest ];
