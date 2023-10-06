@@ -22,6 +22,9 @@
     # Construct an output set that supports a number of default systems
     flake-utils.lib.eachDefaultSystem (system:
       let
+        pkgs = import nixpkgs {
+          inherit system;
+        };
         # Legacy packages that have not been converted to flakes
         legacyPackages = nixpkgs.legacyPackages.${system};
         # OCaml packages available on nixpkgs
@@ -77,7 +80,12 @@
               ocamlPackages.menhir # also includes ocamllex
               ocamlPackages.ppxlib
               ocamlPackages.ppx_deriving
+              ocamlPackages.ppx_sexp_conv
+              ocamlPackages.ppx_expect
               ocamlPackages.alcotest
+              ocamlPackages.base
+              ocamlPackages.pprint
+              # ocamlPackages.nice_parser
             ];
 
             checkInputs = [ ocamlPackages.alcotest ];
@@ -207,6 +215,7 @@
               ocamlPackages.ocamlformat-rpc-lib
               # Fancy REPL thing
               ocamlPackages.utop
+              pkgs.opam
             ];
 
             # Tools from packages
