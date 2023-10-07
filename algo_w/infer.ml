@@ -203,7 +203,7 @@ end = struct
     let instantiated_preds = List.map preds ~f:(instantiate_pred' ctx) in
     (instantiated_preds, instantiate_ty' ctx ty)
 
-  and instantiate_pred' ctx (name, args) : pred =
+  and instantiate_pred' ctx ((name, args) : pred) : pred =
     (name, List.map args ~f:(instantiate_ty' ctx))
 
   let instantiate_pred lvl p =
@@ -392,7 +392,7 @@ end
 
 include Pred_solver
 
-let generalize lvl env (qty : qual_ty) =
+let generalize lvl env (qty : qual_ty) : qual_ty =
   let generalize_ty ty =
     (* Along with generalizing the type we also find all unbound type variables
        which we later use to check predicates for ambiguity. *)
