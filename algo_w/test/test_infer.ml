@@ -1218,6 +1218,22 @@ let%expect_test "" =
     | |}]
 
 let%expect_test "" =
+  infer ~env "let f = fun x -> show(x) in f";
+  [%expect
+    {|
+    let f = fun x -> show(x) in f
+    : a . Show(a) => a -> string
+    | |}]
+
+let%expect_test "" =
+  infer ~env "let f = fun x -> show(x) in f(true)";
+  [%expect
+    {|
+    let f = fun x -> show(x) in f(true)
+    ERROR: missing typeclass instance: Show(bool)
+    | |}]
+
+let%expect_test "" =
   infer ~env
     {|
     let rec build x =
