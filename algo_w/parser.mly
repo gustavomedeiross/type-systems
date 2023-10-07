@@ -20,7 +20,7 @@ let build_ty env ty =
       | None -> ty)
 		| Ty_var _ -> ty
 		| Ty_app (f, args) -> Ty_app (aux f, List.map args ~f:aux)
-		| Ty_arr (args, ret) -> Ty_arr (List.map args ~f:aux, aux ret)
+		| Ty_arrow (args, ret) -> Ty_arrow (List.map args ~f:aux, aux ret)
     | Ty_record ty_row -> Ty_record (build_ty_row ty_row)
   and build_ty_row ty_row = match ty_row with
     | Ty_row_empty
@@ -155,11 +155,11 @@ ty:
 	  t = simple_ty
 	  { t }
 	| LPAREN RPAREN ARROW ret = ty
-	  { Ty_arr ([], ret) }
+	  { Ty_arrow ([], ret) }
 	| arg = simple_ty ARROW ret = ty
-	  { Ty_arr ([arg], ret) }
+	  { Ty_arrow ([arg], ret) }
 	| LPAREN arg = ty COMMA args = flex_list(COMMA, ty) RPAREN ARROW ret = ty 
-	  { Ty_arr (arg :: args, ret) }
+	  { Ty_arrow (arg :: args, ret) }
 	| LBRACE row = ty_row RBRACE
     { Ty_record row }
 

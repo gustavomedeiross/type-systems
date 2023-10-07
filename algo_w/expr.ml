@@ -37,7 +37,7 @@ type ty =
   | Ty_const of name
   | Ty_var of ty var ref
   | Ty_app of ty * ty list
-  | Ty_arr of ty list * ty
+  | Ty_arrow of ty list * ty
   | Ty_record of ty_row
 
 and 'a var =
@@ -74,7 +74,7 @@ let is_simple_expr = function
 let generic_ty_vars ty =
   let rec of_ty set = function
     | Ty_const _ -> set
-    | Ty_arr (args, ret) -> List.fold args ~init:(of_ty set ret) ~f:of_ty
+    | Ty_arrow (args, ret) -> List.fold args ~init:(of_ty set ret) ~f:of_ty
     | Ty_app (f, args) -> List.fold args ~init:(of_ty set f) ~f:of_ty
     | Ty_var { contents = Ty_var_link ty } -> of_ty set ty
     | Ty_var { contents = Ty_var_unbound _ } -> set
@@ -157,10 +157,10 @@ let layout_ty' ~lookup_name ty =
   let open PPrint in
   let rec layout_ty = function
     | Ty_const name -> string name
-    | Ty_arr ([ (Ty_arr _ as arg) ], ret) ->
+    | Ty_arrow ([ (Ty_arrow _ as arg) ], ret) ->
       parens (layout_ty arg) ^^ string " -> " ^^ layout_ty ret
-    | Ty_arr ([ arg ], ret) -> layout_ty arg ^^ string " -> " ^^ layout_ty ret
-    | Ty_arr (args, ret) ->
+    | Ty_arrow ([ arg ], ret) -> layout_ty arg ^^ string " -> " ^^ layout_ty ret
+    | Ty_arrow (args, ret) ->
       let sep = comma ^^ blank 1 in
       parens (separate sep (List.map args ~f:layout_ty))
       ^^ string " -> "

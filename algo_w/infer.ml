@@ -175,8 +175,8 @@ end = struct
   let rec instantiate_ty' ctx (ty : ty) : ty =
     match ty with
     | Ty_const _ -> ty
-    | Ty_arr (ty_args, ty_ret) ->
-      Ty_arr
+    | Ty_arrow (ty_args, ty_ret) ->
+      Ty_arrow
         (List.map ty_args ~f:(instantiate_ty' ctx), instantiate_ty' ctx ty_ret)
     | Ty_app (ty, ty_args) ->
       Ty_app (instantiate_ty' ctx ty, List.map ty_args ~f:(instantiate_ty' ctx))
@@ -198,12 +198,13 @@ end = struct
       Hashtbl.find_or_add ctx.rowvars id ~default:(newrowvar ctx.lvl)
     | Ty_row_const _ -> assert false
 
-  and instantiate_pred' ctx (name, args) =
-    (name, List.map args ~f:(instantiate_ty' ctx))
-
-  and instantiate_qual_ty' ctx qty =
+  and instantiate_qual_ty' ctx (qty: qual_ty) : qual_ty =
     let preds, ty = qty in
-    (List.map preds ~f:(instantiate_pred' ctx), instantiate_ty' ctx ty)
+    let instantiated_preds = List.map preds ~f:(instantiate_pred' ctx) in
+    (instantiated_preds, instantiate_ty' ctx ty)
+
+  and instantiate_pred' ctx (name, args) : pred =
+    (name, List.map args ~f:(instantiate_ty' ctx))
 
   let instantiate_pred lvl p =
     let ctx = make_ctx lvl in
@@ -326,7 +327,7 @@ end = struct
       | Ty_var { contents = Ty_var_generic _ } -> assert false
       | Ty_var { contents = Ty_var_unbound _ } -> true
       | Ty_app _ -> false
-      | Ty_arr _ -> false
+      | Ty_arrow _ -> false
       | Ty_const _ -> false
       | Ty_record _ -> false
     in
@@ -400,8 +401,8 @@ let generalize lvl env (qty : qual_ty) =
     let rec generalize_ty ty =
       match ty with
       | Ty_const _ -> ty
-      | Ty_arr (ty_args, ty_ret) ->
-        Ty_arr (List.map ty_args ~f:generalize_ty, generalize_ty ty_ret)
+      | Ty_arrow (ty_args, ty_ret) ->
+        Ty_arrow (List.map ty_args ~f:generalize_ty, generalize_ty ty_ret)
       | Ty_app (ty, ty_args) ->
         Ty_app (generalize_ty ty, List.map ty_args ~f:generalize_ty)
       | Ty_var { contents = Ty_var_link ty } -> generalize_ty ty
@@ -438,7 +439,7 @@ let occurs_check lvl id ty =
   let rec occurs_check_ty (ty : ty) : unit =
     match ty with
     | Ty_const _ -> ()
-    | Ty_arr (args, ret) ->
+    | Ty_arrow (args, ret) ->
       List.iter args ~f:occurs_check_ty;
       occurs_check_ty ret
     | Ty_app (f, args) ->
@@ -474,7 +475,7 @@ let rec unify (ty1 : ty) (ty2 : ty) =
     | Ty_const name1, Ty_const name2 ->
       if not String.(name1 = name2) then
         type_error (Error_unification (ty1, ty2))
-    | Ty_arr (args1, ret1), Ty_arr (args2, ret2) -> (
+    | Ty_arrow (args1, ret1), Ty_arrow (args2, ret2) -> (
       match List.iter2 args1 args2 ~f:unify with
       | Unequal_lengths ->
         type_error
@@ -543,7 +544,7 @@ and unify_row row1 row2 =
 
 let rec unify_abs arity ty =
   match ty with
-  | Ty_arr (ty_args, ty_ret) ->
+  | Ty_arrow (ty_args, ty_ret) ->
     if List.length ty_args <> arity then
       type_error (Error_arity_mismatch (ty, List.length ty_args, arity));
     (ty_args, ty_ret)
@@ -553,7 +554,7 @@ let rec unify_abs arity ty =
     | Ty_var_unbound v ->
       let ty_ret = newvar v.lvl () in
       let ty_args = List.init arity ~f:(fun _ -> newvar v.lvl ()) in
-      var := Ty_var_link (Ty_arr (ty_args, ty_ret));
+      var := Ty_var_link (Ty_arrow (ty_args, ty_ret));
       (ty_args, ty_ret)
     | Ty_var_generic _ -> failwith "uninstantiated generic type")
   | Ty_app _
@@ -579,7 +580,7 @@ let rec infer' lvl (env : Env.t) (e : expr) =
       in
       infer' lvl env body
     in
-    (cs, Ty_arr (ty_args, ty_body))
+    (cs, Ty_arrow (ty_args, ty_body))
   | Expr_app (func, args) ->
     let cs, ty_func = infer' lvl env func in
     let ty_args, ty_ret = unify_abs (List.length args) ty_func in
@@ -599,7 +600,7 @@ let rec infer' lvl (env : Env.t) (e : expr) =
     let ty_e =
       (* fix : a . (a -> a) -> a *)
       let ty_ret = newvar lvl () in
-      let ty_fun = Ty_arr ([ ty_ret ], ty_ret) in
+      let ty_fun = Ty_arrow ([ ty_ret ], ty_ret) in
       let cs, ty_fun' = infer' (lvl + 1) env (Expr_abs ([ name ], e)) in
       unify ty_fun' ty_fun;
       (cs, ty_ret)
